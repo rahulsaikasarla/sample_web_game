@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Snake Game Screenshot Demo</title>
+  <style>
+    body { background:#181818; color:#eee; font-family:sans-serif; text-align:center; margin:0; padding:30px;}
+    h1 { margin-bottom: 10px; }
+    canvas { background:#222; border:1px solid #fff; display:block; margin:0 auto;}
+    #controls { margin:20px 0 10px 0;}
+    button { margin:0 7px; font-size:1em; padding:5px 15px; }
+    #screenshotImg { margin-top:18px; border:2px solid #ccc; box-shadow:0 0 6px #444; max-width:400px;}
+  </style>
+</head>
+<body>
+  <h1>Snake Game Screenshot Demo</h1>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <div id="score">Score: 0</div>
+  <div id="controls">
+    <button id="startBtn">Start Game</button>
+    <button id="captureBtn">Capture Screenshot</button>
+  </div>
+  <img id="screenshotImg" style="display:none;" alt="Screenshot will appear here" />
+  <script>
+    // Game setup
+    const box = 20;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDiv = document.getElementById('score');
+    const startBtn = document.getElementById('startBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const screenshotImg = document.getElementById('screenshotImg');
+    let snake = [], direction = null, food = {}, score = 0, interval = null, pending = null;
+
+    function resetGame() {
+      snake = [{ x: 9 * box, y: 10 * box }];
+      direction = null;
+      pending = null;
+      score = 0;
+      food = spawnFood();
+      scoreDiv.textContent = "Score: 0";
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      draw();
+    }
+
+    function spawnFood() {
+      let fx, fy;
+      do {
+        fx = Math.floor(Math.random() * 20) * box;
+        fy = Math.floor(Math.random() * 20) * box;
+      } while(snake.some(s=>s.x===fx && s.y===fy));
+      return { x: fx, y: fy };
+    }
+
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // Food
+      ctx.fillStyle = "#ff4444";
+      ctx.beginPath();
+      ctx.arc(food.x+box/2, food.y+box/2, box/2-2, 0, 2*Math.PI); ctx.fill();
+      // Snake
+      for(let i=0; i<snake.length; i++) {
+        ctx.fillStyle = i===0 ? "#228B22" : "#32CD32";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+        ctx.strokeStyle = "#1a691a";
+        ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+      }
+      if(direction==null) return;
+      if(pending) { direction = pending; pending=null; }
+      let sx=snake[0].x, sy=snake[0].y;
+      if(direction==="LEFT") sx-=box;
+      if(direction==="RIGHT") sx+=box;
+      if(direction==="UP") sy-=box;
+      if(direction==="DOWN") sy+=box;
+      if(sx<0) sx=canvas.width-box;
+      if(sx>=canvas.width) sx=0;
+      if(sy<0) sy=canvas.height-box;
+      if(sy>=canvas.height) sy=0;
+      // Eat food
+      if(sx===food.x && sy===food.y) {
+        score++;
+        scoreDiv.textContent = "Score: " + score;
+        food = spawnFood();
+      } else {
+        snake.pop();
+      }
+      // Collide
+      if(snake.some(seg=>seg.x===sx&&seg.y===sy)) {
+        clearInterval(interval);
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "36px Arial"; ctx.textAlign = "center";
+        ctx.fillText("Game Over", canvas.width/2, canvas.height/2);
+        return;
+      }
+      snake.unshift({ x:sx, y:sy });
+    }
+
+    function gameTick() { draw(); }
+    startBtn.onclick = function() {
+      resetGame();
+      direction = "RIGHT";
+      clearInterval(interval);
+      interval = setInterval(gameTick, 120);
+      document.onkeydown = function(e) {
+        if(e.key.startsWith('Arrow')) {
+          let d = e.key.replace('Arrow','').toUpperCase();
+          if(d==="LEFT" && direction!=="RIGHT") pending="LEFT";
+          if(d==="RIGHT" && direction!=="LEFT") pending="RIGHT";
+          if(d==="UP" && direction!=="DOWN") pending="UP";
+          if(d==="DOWN" && direction!=="UP") pending="DOWN";
+        }
+      }
+    };
+
+    // Screenshot functionality
+    captureBtn.onclick = function() {
+      const dataURL = canvas.toDataURL("image/png");
+      screenshotImg.src = dataURL;
+      screenshotImg.style.display = "block";
+    };
+
+    // Show "Press Start" at beginning
+    ctx.fillStyle="#fff";
+    ctx.font="32px Arial";
+    ctx.textAlign="center";
+    ctx.fillText('Press Start', canvas.width/2, canvas.height/2);
+  </script>
+</body>
+</html>
